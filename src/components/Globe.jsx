@@ -38,24 +38,33 @@ s += '</div></div>';
 return s;
 }
 
-function createPlaneShape() {
-var shape = new THREE.Shape();
-shape.moveTo(0, 0.5);
-shape.lineTo(0.15, 0.1);
-shape.lineTo(0.5, 0.1);
-shape.lineTo(0.18, -0.1);
-shape.lineTo(0.25, -0.45);
-shape.lineTo(0, -0.3);
-shape.lineTo(-0.25, -0.45);
-shape.lineTo(-0.18, -0.1);
-shape.lineTo(-0.5, 0.1);
-shape.lineTo(-0.15, 0.1);
-shape.closePath();
-return shape;
+function createPlaneGeo() {
+var s = new THREE.Shape();
+s.moveTo(0, 0.6);
+s.lineTo(0.07, 0.3);
+s.lineTo(0.07, 0.15);
+s.lineTo(0.45, -0.05);
+s.lineTo(0.45, -0.12);
+s.lineTo(0.07, -0.02);
+s.lineTo(0.07, -0.2);
+s.lineTo(0.07, -0.3);
+s.lineTo(0.2, -0.42);
+s.lineTo(0.2, -0.48);
+s.lineTo(0, -0.38);
+s.lineTo(-0.2, -0.48);
+s.lineTo(-0.2, -0.42);
+s.lineTo(-0.07, -0.3);
+s.lineTo(-0.07, -0.2);
+s.lineTo(-0.07, -0.02);
+s.lineTo(-0.45, -0.12);
+s.lineTo(-0.45, -0.05);
+s.lineTo(-0.07, 0.15);
+s.lineTo(-0.07, 0.3);
+s.closePath();
+return new THREE.ShapeGeometry(s);
 }
 
-var planeShape = createPlaneShape();
-var planeGeo = new THREE.ShapeGeometry(planeShape);
+var planeGeo = createPlaneGeo();
 
 export default function GlobeView() {
 var globeRef = useRef();
@@ -139,7 +148,9 @@ var arcsData = useMemo(function() {
   if (!selectedFlight) return [];
   var f = selectedFlight;
   var h = (f.trueTrack || 0) * Math.PI / 180;
-  var cL = Math.cos(f.latitude * Math.PI / 180);
+  var cL = Math.cos(
+    f.latitude * Math.PI / 180
+  );
   return [
     {
       startLat: f.latitude - Math.cos(h) * 3,
@@ -172,17 +183,16 @@ var makeObject = useCallback(function(d) {
   var color = isSel
     ? '#ffffff'
     : getAltitudeColor(d.baroAltitude);
-  var scale = isSel ? 1.2 : 0.5;
+  var scale = isSel ? 1.5 : 0.6;
   var mat = new THREE.MeshBasicMaterial({
     color: color,
     side: THREE.DoubleSide,
     transparent: true,
-    opacity: isSel ? 1.0 : 0.85
+    opacity: isSel ? 1.0 : 0.9
   });
   var mesh = new THREE.Mesh(planeGeo, mat);
   mesh.scale.set(scale, scale, scale);
-  var rot = ((d.trueTrack || 0) + 180) *
-    Math.PI / 180;
+  var rot = (d.trueTrack || 0) * Math.PI / 180;
   mesh.rotation.z = -rot;
   return mesh;
 }, [selectedFlight]);
