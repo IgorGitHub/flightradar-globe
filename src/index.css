@@ -12,6 +12,7 @@ body {
 overflow: hidden;
 background: #040d21;
 font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+-webkit-tap-highlight-color: transparent;
 }
 
 ::-webkit-scrollbar { width: 4px; }
@@ -39,4 +40,21 @@ background: rgba(13, 27, 42, 0.85);
 backdrop-filter: blur(12px);
 -webkit-backdrop-filter: blur(12px);
 border: 1px solid rgba(27, 45, 69, 0.6);
+}
+
+@media (max-width: 640px) {
+.fixed.top-4.left-4 {
+  top: 0.5rem;
+  left: 0.5rem;
+}
+.fixed.top-4.right-4 {
+  top: auto;
+  right: 0.5rem;
+  bottom: 3rem;
+  left: 0.5rem;
+  width: auto;
+}
+.w-72 {
+  width: 160px;
+}
 }

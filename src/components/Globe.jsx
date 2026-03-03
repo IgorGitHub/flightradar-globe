@@ -4,26 +4,26 @@ import useFlightStore from '../store/useFlightStore';
 import { getAltitudeColor } from '../utils/helpers';
 
 export default function GlobeView() {
-const globeRef = useRef();
-const { filteredFlights, setSelectedFlight, selectedFlight } = useFlightStore();
-const [dimensions, setDimensions] = useState({
+var globeRef = useRef();
+var { filteredFlights, setSelectedFlight, selectedFlight } = useFlightStore();
+var [dimensions, setDimensions] = useState({
   width: window.innerWidth,
   height: window.innerHeight
 });
 
-useEffect(() => {
-  const handleResize = () => {
+useEffect(function() {
+  var handleResize = function() {
     setDimensions({ width: window.innerWidth, height: window.innerHeight });
   };
   window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
+  return function() { window.removeEventListener('resize', handleResize); };
 }, []);
 
-useEffect(() => {
-  const globe = globeRef.current;
+useEffect(function() {
+  var globe = globeRef.current;
   if (!globe) return;
 
-  const controls = globe.controls();
+  var controls = globe.controls();
   controls.autoRotate = true;
   controls.autoRotateSpeed = 0.3;
   controls.enableDamping = true;
@@ -34,21 +34,21 @@ useEffect(() => {
   globe.pointOfView({ lat: 30, lng: 10, altitude: 2.5 });
 }, []);
 
-useEffect(() => {
-  const globe = globeRef.current;
+useEffect(function() {
+  var globe = globeRef.current;
   if (!globe) return;
 
-  const stop = () => { globe.controls().autoRotate = false; };
-  const el = globe.renderer().domElement;
+  var stop = function() { globe.controls().autoRotate = false; };
+  var el = globe.renderer().domElement;
   el.addEventListener('mousedown', stop);
   el.addEventListener('touchstart', stop);
-  return () => {
+  return function() {
     el.removeEventListener('mousedown', stop);
     el.removeEventListener('touchstart', stop);
   };
 }, []);
 
-useEffect(() => {
+useEffect(function() {
   if (selectedFlight && globeRef.current) {
     globeRef.current.pointOfView(
       { lat: selectedFlight.latitude, lng: selectedFlight.longitude, altitude: 1.0 },
@@ -57,11 +57,26 @@ useEffect(() => {
   }
 }, [selectedFlight]);
 
-const handleClick = useCallback((point) => {
+var handleClick = useCallback(function(point) {
   setSelectedFlight(point);
 }, [setSelectedFlight]);
 
-const pointsData = useMemo(() => filteredFlights, [filteredFlights]);
+var pointsData = useMemo(function() { return filteredFlights; }, [filteredFlights]);
+
+var createMarker = useCallback(function(d) {
+  var el = document.createElement('div');
+  var isSelected = selectedFlight && d.icao24 === selectedFlight.icao24;
+  var color = isSelected ? '#ffffff' : getAltitudeColor(d.baroAltitude);
+  var size = isSelected ? 14 : 8;
+  var rotation = d.trueTrack || 0;
+
+  el.innerHTML = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + color + '" style="transform:rotate(' + rotation + 'deg);filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))" 
+xmlns="http://www.w3.org/2000/svg"><path d="M12 2L8 10H3L5 13L3 22L12 18L21 22L19 13L21 10H16L12 2Z"/></svg>';
+  el.style.cursor = 'pointer';
+  el.style.transition = 'transform 0.3s';
+
+  return el;
+}, [selectedFlight]);
 
 return (
   <GlobeGL
@@ -75,38 +90,13 @@ return (
     atmosphereColor="#00d4ff"
     atmosphereAltitude={0.15}
 
-    pointsData={pointsData}
-    pointLat="latitude"
-    pointLng="longitude"
-    pointAltitude={d => d.onGround ? 0.001 : Math.min((d.baroAltitude || 0) / 800000, 0.06)}
-    pointRadius={0.18}
-    pointColor={d => {
-      if (selectedFlight && d.icao24 === selectedFlight.icao24) return '#ffffff';
-      return getAltitudeColor(d.baroAltitude);
-    }}
-    pointsMerge={false}
-    onPointClick={handleClick}
-    pointLabel={d => `
-      <div style="
-        background:rgba(13,27,42,0.95);
-        backdrop-filter:blur(8px);
-        border:1px solid rgba(0,212,255,0.3);
-        border-radius:8px;
-        padding:8px 12px;
-        font-family:monospace;
-        font-size:11px;
-        color:white;
-      ">
-        <div style="font-weight:bold;font-size:13px;color:#00d4ff;margin-bottom:4px;">
-          ${d.callsign}
-        </div>
-        <div style="color:#aaa;">${d.originCountry}</div>
-        <div style="margin-top:4px;">
-          ${d.altitudeFt ? d.altitudeFt.toLocaleString() + ' ft' : 'Ground'}
-          · ${d.speedKnots ? d.speedKnots + ' kts' : '—'}
-        </div>
-      </div>
-    `}
+    htmlElementsData={pointsData}
+    htmlLat="latitude"
+    htmlLng="longitude"
+    htmlAltitude={function(d) { return d.onGround ? 0.001 : Math.min((d.baroAltitude || 0) / 800000, 0.06); }}
+    htmlElement={createMarker}
+    onHtmlElementClick={handleClick}
+    htmlTransitionDuration={0}
 
     waitForGlobeReady={true}
     animateIn={true}
