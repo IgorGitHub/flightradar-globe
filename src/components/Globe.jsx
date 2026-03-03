@@ -3,6 +3,8 @@ import GlobeGL from 'react-globe.gl';
 import useFlightStore from '../store/useFlightStore';
 import { getAltitudeColor } from '../utils/helpers';
 
+var planePath = 'M12 2L8 10H3L5 13L3 22L12 18L21 22L19 13L21 10H16L12 2Z';
+
 export default function GlobeView() {
 var globeRef = useRef();
 var { filteredFlights, setSelectedFlight, selectedFlight } = useFlightStore();
@@ -70,8 +72,20 @@ var createMarker = useCallback(function(d) {
   var size = isSelected ? 14 : 8;
   var rotation = d.trueTrack || 0;
 
-  el.innerHTML = '<svg width="' + size + '" height="' + size + '" viewBox="0 0 24 24" fill="' + color + '" style="transform:rotate(' + rotation + 'deg);filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))" 
-xmlns="http://www.w3.org/2000/svg"><path d="M12 2L8 10H3L5 13L3 22L12 18L21 22L19 13L21 10H16L12 2Z"/></svg>';
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('width', String(size));
+  svg.setAttribute('height', String(size));
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', color);
+  svg.style.transform = 'rotate(' + rotation + 'deg)';
+  svg.style.filter = 'drop-shadow(0 0 2px rgba(0,0,0,0.5))';
+
+  var path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('d', planePath);
+  svg.appendChild(path);
+
+  el.appendChild(svg);
   el.style.cursor = 'pointer';
   el.style.transition = 'transform 0.3s';
 
