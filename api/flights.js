@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
 
-const OPENSKY_URL = 'https://opensky-network.org/api/states/all';
+const API_URL = 'https://api.adsb.lol/v2/ladd/lat/45.0/lon/0.0/dist/5000';
 
 let cache = { data: null, timestamp: 0 };
 const CACHE_TTL = 10000;
@@ -19,12 +19,12 @@ try {
     return res.status(200).json(cache.data);
   }
 
-  const response = await fetch(OPENSKY_URL, {
+  const response = await fetch(API_URL, {
     headers: { 'Accept': 'application/json' }
   });
 
   if (!response.ok) {
-    throw new Error('OpenSky responded ' + response.status);
+    throw new Error('API responded ' + response.status);
   }
 
   const raw = await response.json();
@@ -49,36 +49,37 @@ try {
 }
 
 function transformFlights(data) {
-if (!data || !data.states) {
+if (!data || !data.ac) {
   return { time: null, count: 0, flights: [] };
 }
 
-var flights = data.states
-  .filter(function(s) { return s[5] !== null && s[6] !== null; })
-  .map(function(s) {
+var flights = data.ac
+  .filter(function(a) { return a.lat && a.lon; })
+  .map(function(a) {
     return {
-      icao24: s[0],
-      callsign: (s[1] || '').trim() || 'N/A',
-      originCountry: s[2],
-      timePosition: s[3],
-      lastContact: s[4],
-      longitude: s[5],
-      latitude: s[6],
-      baroAltitude: s[7],
-      onGround: s[8],
-      velocity: s[9],
-      trueTrack: s[10],
-      verticalRate: s[11],
-      geoAltitude: s[13],
-      squawk: s[14],
-      altitudeFt: s[7] ? Math.round(s[7] * 3.28084) : null,
-      speedKnots: s[9] ? Math.round(s[9] * 1.94384) : null,
-      speedKmh: s[9] ? Math.round(s[9] * 3.6) : null
+      icao24: a.hex || 'unknown',
+      callsign: a.flight ? a.flight.trim() : 'N/A',
+      originCountry: a.r || 'Unknown',
+      latitude: a.lat,
+      longitude: a.lon,
+      baroAltitude: a.alt_baro === 'ground' ? 0 : (a.alt_baro || 0) * 0.3048,
+      onGround: a.alt_baro === 'ground',
+      velocity: a.gs ? a.gs * 0.514444 : null,
+      trueTrack: a.track || null,
+      verticalRate: a.baro_rate ? a.baro_rate * 0.00508 : null,
+      geoAltitude: a.alt_geom ? a.alt_geom * 0.3048 : null,
+      squawk: a.squawk || null,
+      altitudeFt: a.alt_baro === 'ground' ? 0 : (a.alt_baro || null),
+      speedKnots: a.gs ? Math.round(a.gs) : null,
+      speedKmh: a.gs ? Math.round(a.gs * 1.852) : null,
+      type: a.t || null,
+      registration: a.r || null,
+      lastContact: Math.floor(Date.now() / 1000)
     };
   });
 
 return {
-  time: data.time,
+  time: Math.floor(Date.now() / 1000),
   count: flights.length,
   flights: flights
 };
