@@ -1,9 +1,26 @@
 import fetch from 'node-fetch';
 
-const API_URL = 'https://api.adsb.lol/v2/ladd/lat/45.0/lon/0.0/dist/5000';
+var REGIONS = [
+'51.5/0.0/250',
+'48.8/2.3/250',
+'40.7/-74.0/250',
+'33.9/-118.2/250',
+'35.7/139.7/250',
+'25.3/55.3/250',
+'1.3/103.8/250',
+'-33.9/151.2/250',
+'55.7/37.6/250',
+'41.9/12.5/250',
+'19.4/-99.1/250',
+'-23.5/-46.6/250',
+'25.0/121.5/250',
+'37.5/127.0/250',
+'28.6/77.2/250'
+];
+
+var BASE = 'https://api.adsb.lol/v2/point/';
 
 let cache = { data: null, timestamp: 0 };
-const CACHE_TTL = 10000;
 
 export default async function handler(req, res) {
 res.setHeader('Access-Control-Allow-Origin', '*');
@@ -14,24 +31,68 @@ if (req.method === 'OPTIONS') {
 }
 
 try {
-  const now = Date.now();
-  if (cache.data && now - cache.timestamp < CACHE_TTL) {
+  var now = Date.now();
+  if (cache.data && now - cache.timestamp < 15000) {
     return res.status(200).json(cache.data);
   }
 
-  const response = await fetch(API_URL, {
-    headers: { 'Accept': 'application/json' }
+  var promises = REGIONS.map(function(r) {
+    return fetch(BASE + r, {
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(function(resp) {
+      if (!resp.ok) return { ac: [] };
+      return resp.json();
+    })
+    .catch(function() {
+      return { ac: [] };
+    });
   });
 
-  if (!response.ok) {
-    throw new Error('API responded ' + response.status);
-  }
+  var results = await Promise.all(promises);
 
-  const raw = await response.json();
-  const result = transformFlights(raw);
+  var seen = {};
+  var allFlights = [];
+
+  results.forEach(function(data) {
+    if (!data || !data.ac) return;
+    data.ac.forEach(function(a) {
+      if (!a.lat || !a.lon) return;
+      var id = a.hex || (a.lat + ',' + a.lon);
+      if (seen[id]) return;
+      seen[id] = true;
+
+      allFlights.push({
+        icao24: a.hex || 'unknown',
+        callsign: a.flight ? a.flight.trim() : 'N/A',
+        originCountry: a.r || 'Unknown',
+        latitude: a.lat,
+        longitude: a.lon,
+        baroAltitude: a.alt_baro === 'ground' ? 0 : (a.alt_baro || 0) * 0.3048,
+        onGround: a.alt_baro === 'ground',
+        velocity: a.gs ? a.gs * 0.514444 : null,
+        trueTrack: a.track || null,
+        verticalRate: a.baro_rate ? a.baro_rate * 0.00508 : null,
+        geoAltitude: a.alt_geom ? a.alt_geom * 0.3048 : null,
+        squawk: a.squawk || null,
+        altitudeFt: a.alt_baro === 'ground' ? 0 : (a.alt_baro || null),
+        speedKnots: a.gs ? Math.round(a.gs) : null,
+        speedKmh: a.gs ? Math.round(a.gs * 1.852) : null,
+        type: a.t || null,
+        registration: a.r || null,
+        lastContact: Math.floor(Date.now() / 1000)
+      });
+    });
+  });
+
+  var result = {
+    time: Math.floor(Date.now() / 1000),
+    count: allFlights.length,
+    flights: allFlights,
+    source: 'adsb.lol'
+  };
 
   cache = { data: result, timestamp: now };
-
   return res.status(200).json(result);
 
 } catch (error) {
@@ -46,41 +107,4 @@ try {
     message: error.message
   });
 }
-}
-
-function transformFlights(data) {
-if (!data || !data.ac) {
-  return { time: null, count: 0, flights: [] };
-}
-
-var flights = data.ac
-  .filter(function(a) { return a.lat && a.lon; })
-  .map(function(a) {
-    return {
-      icao24: a.hex || 'unknown',
-      callsign: a.flight ? a.flight.trim() : 'N/A',
-      originCountry: a.r || 'Unknown',
-      latitude: a.lat,
-      longitude: a.lon,
-      baroAltitude: a.alt_baro === 'ground' ? 0 : (a.alt_baro || 0) * 0.3048,
-      onGround: a.alt_baro === 'ground',
-      velocity: a.gs ? a.gs * 0.514444 : null,
-      trueTrack: a.track || null,
-      verticalRate: a.baro_rate ? a.baro_rate * 0.00508 : null,
-      geoAltitude: a.alt_geom ? a.alt_geom * 0.3048 : null,
-      squawk: a.squawk || null,
-      altitudeFt: a.alt_baro === 'ground' ? 0 : (a.alt_baro || null),
-      speedKnots: a.gs ? Math.round(a.gs) : null,
-      speedKmh: a.gs ? Math.round(a.gs * 1.852) : null,
-      type: a.t || null,
-      registration: a.r || null,
-      lastContact: Math.floor(Date.now() / 1000)
-    };
-  });
-
-return {
-  time: Math.floor(Date.now() / 1000),
-  count: flights.length,
-  flights: flights
-};
 }
