@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import {
 X, Plane, ArrowUp, ArrowDown,
-Gauge, Navigation, Radio,
-Globe2, Info, MapPin, Compass
+Gauge, Compass, Radio,
+MapPin, Navigation, Info
 } from 'lucide-react';
 import useFlightStore from '../store/useFlightStore';
 import {
@@ -13,291 +13,326 @@ import {
 getAirline, getAirlineLogo
 } from '../utils/airlines';
 
-function DataItem(props) {
-return (
-  <div className="bg-white/5 rounded-lg p-2.5">
-    <div className="flex items-center gap-1.5 mb-1">
-      <span className="text-accent">
-        {props.icon}
-      </span>
-      <span className={
-        'text-[10px] text-gray-500 ' +
-        'uppercase tracking-wider'
-      }>
-        {props.label}
-      </span>
-    </div>
-    <p className={
-      'text-white text-sm font-semibold'
-    }>
-      {props.value}
-    </p>
-  </div>
-);
-}
-
-function AirlineBanner(props) {
-var a = props.airline;
-var logo = props.logoUrl;
-var [err, setErr] = useState(false);
-
-if (!a) return null;
-
-return (
-  <div className={
-    'flex items-center gap-3 ' +
-    'bg-white/5 rounded-xl p-3 mb-1'
-  }>
-    {logo && !err ? (
-      <img
-        src={logo}
-        alt={a.name}
-        className={
-          'w-8 h-8 rounded-lg ' +
-          'bg-white object-contain p-1'
-        }
-        onError={function() {
-          setErr(true);
-        }}
-      />
-    ) : (
-      <div className={
-        'w-8 h-8 rounded-lg bg-accent/20 ' +
-        'flex items-center justify-center'
-      }>
-        <Plane className={
-          'w-4 h-4 text-accent'
-        } />
-      </div>
-    )}
-    <div>
-      <p className={
-        'text-white text-sm font-bold'
-      }>
-        {a.name}
-      </p>
-      {a.iata && (
-        <p className={
-          'text-gray-400 text-[10px] font-mono'
-        }>
-          IATA: {a.iata}
-        </p>
-      )}
-    </div>
-  </div>
-);
-}
-
 export default function FlightCard() {
 var store = useFlightStore();
 var f = store.selectedFlight;
 var clear = store.clearSelectedFlight;
+var [imgErr, setImgErr] = useState(false);
 
 if (!f) return null;
 
-var isUp = f.verticalRate > 1;
-var isDown = f.verticalRate < -1;
 var airline = getAirline(f.callsign);
 var logoUrl = getAirlineLogo(f.callsign);
+var isUp = f.verticalRate > 1;
+var isDown = f.verticalRate < -1;
 var hdg = f.trueTrack
-  ? Math.round(f.trueTrack) + '\u00B0'
-  : 'N/A';
-var hdgStyle = {
-  transform: 'rotate(' +
-    (f.trueTrack || 0) + 'deg)'
-};
+  ? Math.round(f.trueTrack)
+  : null;
 
 return (
   <div className={
-    'fixed top-4 right-4 w-80 z-40 glass ' +
-    'rounded-2xl shadow-2xl shadow-black/50 ' +
-    'overflow-hidden animate-slide-in ' +
-    'max-h-[90vh] overflow-y-auto'
+    'fixed top-4 right-4 w-[340px] z-40 ' +
+    'rounded-2xl overflow-hidden ' +
+    'animate-slide-in ' +
+    'max-h-[92vh] overflow-y-auto ' +
+    'bg-[#0c1829] border border-[#1a2d4a]'
   }>
+
     <div className={
-      'bg-gradient-to-r from-accent/20 ' +
-      'to-transparent p-4 border-b ' +
-      'border-card-border'
+      'relative p-5 pb-4 ' +
+      'bg-gradient-to-b from-[#122040] to-[#0c1829]'
     }>
-      <div className={
-        'flex items-center justify-between'
-      }>
-        <div className={
-          'flex items-center gap-3'
-        }>
+      <button
+        onClick={clear}
+        className={
+          'absolute top-4 right-4 w-8 h-8 ' +
+          'rounded-full bg-white/10 ' +
+          'hover:bg-white/20 flex items-center ' +
+          'justify-center transition-colors'
+        }
+      >
+        <X className="w-4 h-4 text-white/60" />
+      </button>
+
+      <div className="flex items-center gap-4">
+        {logoUrl && !imgErr ? (
+          <img
+            src={logoUrl}
+            alt={airline ? airline.name : ''}
+            className={
+              'w-14 h-14 rounded-xl ' +
+              'object-contain bg-white/10 p-1'
+            }
+            onError={function() {
+              setImgErr(true);
+            }}
+          />
+        ) : (
           <div className={
-            'w-10 h-10 rounded-xl ' +
+            'w-14 h-14 rounded-xl ' +
             'bg-accent/20 flex items-center ' +
             'justify-center'
           }>
             <Plane className={
-              'w-5 h-5 text-accent'
+              'w-7 h-7 text-accent'
             } />
           </div>
-          <div>
-            <h3 className={
-              'text-white font-bold ' +
-              'text-lg tracking-wide'
-            }>
-              {f.callsign || 'N/A'}
-            </h3>
+        )}
+        <div>
+          {airline && (
             <p className={
-              'text-gray-400 text-xs font-mono'
+              'text-white/50 text-xs mb-0.5'
             }>
-              {f.icao24.toUpperCase()}
+              {airline.name}
             </p>
-          </div>
+          )}
+          <h2 className={
+            'text-white font-bold text-2xl ' +
+            'tracking-wide leading-tight'
+          }>
+            {f.callsign || 'N/A'}
+          </h2>
+          <p className={
+            'text-white/30 text-[11px] ' +
+            'font-mono mt-0.5'
+          }>
+            {f.icao24.toUpperCase()}
+            {airline ? ' \u00B7 IATA: ' +
+              airline.iata : ''}
+          </p>
         </div>
-        <button
-          onClick={clear}
-          className={
-            'w-8 h-8 rounded-lg bg-white/5 ' +
-            'hover:bg-white/10 flex ' +
-            'items-center justify-center ' +
-            'transition-colors'
-          }
-        >
-          <X className={
-            'w-4 h-4 text-gray-400'
-          } />
-        </button>
       </div>
     </div>
 
-    <div className="p-4 space-y-3">
+    <div className="px-5 pt-3 pb-2">
       <div className={
-        'flex items-center gap-2 mb-1'
+        'flex items-center justify-between ' +
+        'mb-4'
       }>
-        <div className={
-          'w-2 h-2 rounded-full ' +
-          'animate-pulse-dot ' +
-          (f.onGround
-            ? 'bg-yellow-400'
-            : 'bg-green-400')
-        } />
+        <div className="flex items-center gap-2">
+          <div className={
+            'w-2 h-2 rounded-full ' +
+            (f.onGround
+              ? 'bg-yellow-400'
+              : 'bg-green-400') +
+            ' animate-pulse-dot'
+          } />
+          <span className={
+            'text-sm font-medium ' +
+            (f.onGround
+              ? 'text-yellow-400'
+              : 'text-green-400')
+          }>
+            {f.onGround
+              ? 'On Ground'
+              : 'In Flight'}
+          </span>
+        </div>
         <span className={
-          'text-xs text-gray-300'
-        }>
-          {f.onGround
-            ? 'On Ground'
-            : 'In Flight'}
-        </span>
-        <span className={
-          'text-xs text-gray-500 ml-auto'
+          'text-white/30 text-xs'
         }>
           {timeSince(f.lastContact)}
         </span>
       </div>
 
-      <AirlineBanner
-        airline={airline}
-        logoUrl={logoUrl}
-      />
-
       {(f.type || f.registration) && (
         <div className={
-          'flex items-center gap-2 ' +
-          'bg-accent/10 rounded-lg px-3 py-2'
+          'flex items-center gap-3 ' +
+          'bg-white/5 rounded-xl p-3 mb-4'
         }>
-          <Info className={
-            'w-3.5 h-3.5 text-accent'
-          } />
-          {f.type && (
-            <span className={
-              'text-accent text-xs font-medium'
+          <div className={
+            'w-10 h-10 rounded-lg ' +
+            'bg-accent/10 flex items-center ' +
+            'justify-center'
+          }>
+            <Info className={
+              'w-5 h-5 text-accent'
+            } />
+          </div>
+          <div>
+            {f.type && (
+              <p className={
+                'text-white font-bold text-sm'
+              }>
+                {f.type}
+              </p>
+            )}
+            {f.registration && (
+              <p className={
+                'text-white/40 text-xs font-mono'
+              }>
+                {f.registration}
+              </p>
+            )}
+          </div>
+          <div className="ml-auto text-right">
+            <p className={
+              'text-white/40 text-[10px] ' +
+              'uppercase'
             }>
-              {f.type}
-            </span>
-          )}
-          {f.registration && (
-            <span className={
-              'text-gray-400 text-xs ml-auto'
+              Country
+            </p>
+            <p className={
+              'text-white text-sm font-medium'
             }>
-              {f.registration}
-            </span>
-          )}
+              {f.originCountry}
+            </p>
+          </div>
         </div>
       )}
 
       <div className={
-        'grid grid-cols-2 gap-3'
+        'grid grid-cols-3 gap-2 mb-4'
       }>
-        <DataItem
-          icon={
-            <Globe2 className="w-3.5 h-3.5" />
-          }
-          label="Country"
-          value={f.originCountry}
-        />
-        <DataItem
-          icon={
-            isUp
-              ? <ArrowUp
-                  className="w-3.5 h-3.5"
-                />
-              : isDown
-                ? <ArrowDown
-                    className="w-3.5 h-3.5"
-                  />
-                : <Navigation
-                    className="w-3.5 h-3.5"
-                  />
-          }
-          label="Altitude"
-          value={formatAltitude(f.baroAltitude)}
-        />
-        <DataItem
-          icon={
-            <Gauge className="w-3.5 h-3.5" />
-          }
-          label="Speed"
-          value={formatSpeed(f.velocity)}
-        />
-        <DataItem
-          icon={
-            <Compass className="w-3.5 h-3.5" />
-          }
-          label="Heading"
-          value={hdg}
-        />
-        <DataItem
-          icon={
-            <ArrowUp
-              className="w-3.5 h-3.5"
-              style={hdgStyle}
-            />
-          }
-          label="V/S"
-          value={
-            formatVerticalRate(f.verticalRate)
-          }
-        />
-        <DataItem
-          icon={
-            <Radio className="w-3.5 h-3.5" />
-          }
-          label="Squawk"
-          value={f.squawk || 'N/A'}
-        />
+        <div className={
+          'bg-white/5 rounded-xl p-3 ' +
+          'text-center'
+        }>
+          <p className={
+            'text-white/30 text-[10px] ' +
+            'uppercase mb-1'
+          }>
+            Altitude
+          </p>
+          <p className={
+            'text-white font-bold text-base'
+          }>
+            {f.altitudeFt
+              ? f.altitudeFt.toLocaleString()
+              : '0'}
+          </p>
+          <p className={
+            'text-white/30 text-[10px]'
+          }>ft</p>
+        </div>
+        <div className={
+          'bg-white/5 rounded-xl p-3 ' +
+          'text-center'
+        }>
+          <p className={
+            'text-white/30 text-[10px] ' +
+            'uppercase mb-1'
+          }>
+            Speed
+          </p>
+          <p className={
+            'text-white font-bold text-base'
+          }>
+            {f.speedKnots || 'N/A'}
+          </p>
+          <p className={
+            'text-white/30 text-[10px]'
+          }>kts</p>
+        </div>
+        <div className={
+          'bg-white/5 rounded-xl p-3 ' +
+          'text-center'
+        }>
+          <p className={
+            'text-white/30 text-[10px] ' +
+            'uppercase mb-1'
+          }>
+            Heading
+          </p>
+          <p className={
+            'text-white font-bold text-base'
+          }>
+            {hdg !== null
+              ? hdg + '\u00B0'
+              : 'N/A'}
+          </p>
+          <p className={
+            'text-white/30 text-[10px]'
+          }>
+            {hdg !== null ? (
+              hdg >= 337 || hdg < 23 ? 'N' :
+              hdg < 68 ? 'NE' :
+              hdg < 113 ? 'E' :
+              hdg < 158 ? 'SE' :
+              hdg < 203 ? 'S' :
+              hdg < 248 ? 'SW' :
+              hdg < 293 ? 'W' : 'NW'
+            ) : ''}
+          </p>
+        </div>
       </div>
 
       <div className={
-        'mt-3 pt-3 border-t border-card-border'
+        'grid grid-cols-2 gap-2 mb-4'
+      }>
+        <div className={
+          'bg-white/5 rounded-xl p-3'
+        }>
+          <div className={
+            'flex items-center gap-1.5 mb-1'
+          }>
+            {isUp
+              ? <ArrowUp className={
+                  'w-3.5 h-3.5 text-green-400'
+                } />
+              : isDown
+                ? <ArrowDown className={
+                    'w-3.5 h-3.5 text-orange-400'
+                  } />
+                : <Navigation className={
+                    'w-3.5 h-3.5 text-white/30'
+                  } />
+            }
+            <span className={
+              'text-white/30 text-[10px] ' +
+              'uppercase'
+            }>
+              Vertical Speed
+            </span>
+          </div>
+          <p className={
+            'text-white font-semibold text-sm'
+          }>
+            {formatVerticalRate(f.verticalRate)}
+          </p>
+        </div>
+        <div className={
+          'bg-white/5 rounded-xl p-3'
+        }>
+          <div className={
+            'flex items-center gap-1.5 mb-1'
+          }>
+            <Radio className={
+              'w-3.5 h-3.5 text-white/30'
+            } />
+            <span className={
+              'text-white/30 text-[10px] ' +
+              'uppercase'
+            }>
+              Squawk
+            </span>
+          </div>
+          <p className={
+            'text-white font-semibold text-sm'
+          }>
+            {f.squawk || 'N/A'}
+          </p>
+        </div>
+      </div>
+
+      <div className={
+        'border-t border-white/5 pt-3 pb-2'
       }>
         <div className={
           'flex items-center ' +
-          'justify-center gap-1'
+          'justify-center gap-1.5'
         }>
           <MapPin className={
-            'w-3 h-3 text-gray-500'
+            'w-3 h-3 text-white/20'
           } />
           <p className={
-            'text-[10px] text-gray-500 font-mono'
+            'text-[11px] text-white/20 ' +
+            'font-mono'
           }>
             {f.latitude
               ? f.latitude.toFixed(4)
               : '?'}
-            {'\u00B0N, '}
+            {'\u00B0N  '}
             {f.longitude
               ? f.longitude.toFixed(4)
               : '?'}
