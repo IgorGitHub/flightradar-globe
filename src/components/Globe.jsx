@@ -1,9 +1,6 @@
 import React, {
-useRef,
-useEffect,
-useMemo,
-useCallback,
-useState
+useRef, useEffect, useMemo,
+useCallback, useState
 } from 'react';
 import GlobeGL from 'react-globe.gl';
 import * as THREE from 'three';
@@ -41,6 +38,25 @@ s += '</div></div>';
 return s;
 }
 
+function createPlaneShape() {
+var shape = new THREE.Shape();
+shape.moveTo(0, 0.5);
+shape.lineTo(0.15, 0.1);
+shape.lineTo(0.5, 0.1);
+shape.lineTo(0.18, -0.1);
+shape.lineTo(0.25, -0.45);
+shape.lineTo(0, -0.3);
+shape.lineTo(-0.25, -0.45);
+shape.lineTo(-0.18, -0.1);
+shape.lineTo(-0.5, 0.1);
+shape.lineTo(-0.15, 0.1);
+shape.closePath();
+return shape;
+}
+
+var planeShape = createPlaneShape();
+var planeGeo = new THREE.ShapeGeometry(planeShape);
+
 export default function GlobeView() {
 var globeRef = useRef();
 var store = useFlightStore();
@@ -68,7 +84,6 @@ useEffect(function() {
 useEffect(function() {
   var g = globeRef.current;
   if (!g) return;
-
   var c = g.controls();
   c.autoRotate = true;
   c.autoRotateSpeed = 0.3;
@@ -78,12 +93,10 @@ useEffect(function() {
   c.maxDistance = 500;
   c.rotateSpeed = 0.5;
   c.zoomSpeed = 1.2;
-
-  var renderer = g.renderer();
-  renderer.setPixelRatio(
+  var r = g.renderer();
+  r.setPixelRatio(
     Math.min(window.devicePixelRatio, 2)
   );
-
   g.pointOfView({
     lat: 30, lng: 10, altitude: 2.5
   });
@@ -125,58 +138,59 @@ var points = useMemo(function() {
 var arcsData = useMemo(function() {
   if (!selectedFlight) return [];
   var f = selectedFlight;
-  var heading = (f.trueTrack || 0) * Math.PI / 180;
-  var cosLat = Math.cos(f.latitude * Math.PI / 180);
-  var arcs = [];
-  arcs.push({
-    startLat: f.latitude -
-      Math.cos(heading) * 3,
-    startLng: f.longitude -
-      Math.sin(heading) * 3 / cosLat,
-    endLat: f.latitude,
-    endLng: f.longitude,
-    color: [
-      'rgba(0,212,255,0.05)',
-      'rgba(0,212,255,0.8)'
-    ]
-  });
-  arcs.push({
-    startLat: f.latitude,
-    startLng: f.longitude,
-    endLat: f.latitude +
-      Math.cos(heading) * 3,
-    endLng: f.longitude +
-      Math.sin(heading) * 3 / cosLat,
-    color: [
-      'rgba(0,212,255,0.8)',
-      'rgba(0,212,255,0.05)'
-    ]
-  });
-  return arcs;
+  var h = (f.trueTrack || 0) * Math.PI / 180;
+  var cL = Math.cos(f.latitude * Math.PI / 180);
+  return [
+    {
+      startLat: f.latitude - Math.cos(h) * 3,
+      startLng: f.longitude -
+        Math.sin(h) * 3 / cL,
+      endLat: f.latitude,
+      endLng: f.longitude,
+      color: [
+        'rgba(0,212,255,0.05)',
+        'rgba(0,212,255,0.8)'
+      ]
+    },
+    {
+      startLat: f.latitude,
+      startLng: f.longitude,
+      endLat: f.latitude + Math.cos(h) * 3,
+      endLng: f.longitude +
+        Math.sin(h) * 3 / cL,
+      color: [
+        'rgba(0,212,255,0.8)',
+        'rgba(0,212,255,0.05)'
+      ]
+    }
+  ];
 }, [selectedFlight]);
 
-var getAlt = function(d) {
-  if (d.onGround) return 0.001;
+var makeObject = useCallback(function(d) {
+  var isSel = selectedFlight &&
+    d.icao24 === selectedFlight.icao24;
+  var color = isSel
+    ? '#ffffff'
+    : getAltitudeColor(d.baroAltitude);
+  var scale = isSel ? 1.2 : 0.5;
+  var mat = new THREE.MeshBasicMaterial({
+    color: color,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: isSel ? 1.0 : 0.85
+  });
+  var mesh = new THREE.Mesh(planeGeo, mat);
+  mesh.scale.set(scale, scale, scale);
+  var rot = ((d.trueTrack || 0) + 180) *
+    Math.PI / 180;
+  mesh.rotation.z = -rot;
+  return mesh;
+}, [selectedFlight]);
+
+var getObjAlt = function(d) {
+  if (d.onGround) return 0.002;
   var a = d.baroAltitude || 0;
-  return Math.min(a / 800000, 0.06);
-};
-
-var getColor = function(d) {
-  if (selectedFlight) {
-    if (d.icao24 === selectedFlight.icao24) {
-      return '#ffffff';
-    }
-  }
-  return getAltitudeColor(d.baroAltitude);
-};
-
-var getRadius = function(d) {
-  if (selectedFlight) {
-    if (d.icao24 === selectedFlight.icao24) {
-      return 0.4;
-    }
-  }
-  return 0.18;
+  return Math.min(a / 800000, 0.06) + 0.002;
 };
 
 return (
@@ -200,15 +214,13 @@ return (
     atmosphereColor="#00d4ff"
     atmosphereAltitude={0.15}
     showGraticules={true}
-    pointsData={points}
-    pointLat="latitude"
-    pointLng="longitude"
-    pointAltitude={getAlt}
-    pointRadius={getRadius}
-    pointColor={getColor}
-    pointsMerge={false}
-    onPointClick={handleClick}
-    pointLabel={makeLabel}
+    objectsData={points}
+    objectLat="latitude"
+    objectLng="longitude"
+    objectAltitude={getObjAlt}
+    objectThreeObject={makeObject}
+    onObjectClick={handleClick}
+    objectLabel={makeLabel}
     arcsData={arcsData}
     arcStartLat="startLat"
     arcStartLng="startLng"
