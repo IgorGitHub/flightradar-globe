@@ -62,6 +62,141 @@ var REGIONS = [
 '60.3/25.0/250'
 ];
 
+var regCountry = {
+'A': 'United States',
+'B': 'China',
+'C': 'Canada',
+'D': 'Germany',
+'E': 'Spain',
+'F': 'France',
+'G': 'United Kingdom',
+'H': 'Hungary',
+'I': 'Italy',
+'J': 'Japan',
+'L': 'Luxembourg',
+'M': 'Isle of Man',
+'N': 'United States',
+'O': 'Austria',
+'P': 'Brazil',
+'R': 'Russia',
+'S': 'Sweden',
+'T': 'Turkey',
+'U': 'Australia',
+'V': 'India',
+'Z': 'New Zealand',
+'AP': 'Pakistan',
+'A4O': 'Oman',
+'A5': 'Bhutan',
+'A6': 'UAE',
+'A7': 'Qatar',
+'A9C': 'Bahrain',
+'B': 'China',
+'CC': 'Chile',
+'CN': 'Morocco',
+'CS': 'Portugal',
+'CU': 'Cuba',
+'D2': 'Angola',
+'EC': 'Spain',
+'EI': 'Ireland',
+'EP': 'Iran',
+'ET': 'Ethiopia',
+'EW': 'Belarus',
+'EX': 'Kyrgyzstan',
+'HA': 'Hungary',
+'HB': 'Switzerland',
+'HC': 'Somalia',
+'HI': 'Dominican Rep',
+'HK': 'Colombia',
+'HL': 'South Korea',
+'HP': 'Panama',
+'HR': 'Rwanda',
+'HS': 'Thailand',
+'HZ': 'Saudi Arabia',
+'JA': 'Japan',
+'JY': 'Jordan',
+'LN': 'Norway',
+'LV': 'Argentina',
+'LX': 'Luxembourg',
+'LY': 'Lithuania',
+'LZ': 'Bulgaria',
+'OB': 'Peru',
+'OD': 'Lebanon',
+'OE': 'Austria',
+'OH': 'Finland',
+'OK': 'Czech Rep',
+'OM': 'Slovakia',
+'OO': 'Belgium',
+'OY': 'Denmark',
+'PH': 'Netherlands',
+'PK': 'Indonesia',
+'PP': 'Brazil',
+'PR': 'Brazil',
+'PT': 'Brazil',
+'RA': 'Russia',
+'RP': 'Philippines',
+'SE': 'Sweden',
+'SP': 'Poland',
+'SU': 'Egypt',
+'SX': 'Greece',
+'TC': 'Turkey',
+'TF': 'Iceland',
+'TG': 'Guatemala',
+'TI': 'Costa Rica',
+'TR': 'Gabon',
+'TS': 'Tunisia',
+'UK': 'Uzbekistan',
+'UR': 'Ukraine',
+'VH': 'Australia',
+'VN': 'Vietnam',
+'VP': 'UK Overseas',
+'VT': 'India',
+'XA': 'Mexico',
+'XB': 'Mexico',
+'XC': 'Mexico',
+'YI': 'Iraq',
+'YR': 'Romania',
+'YU': 'Serbia',
+'ZK': 'New Zealand',
+'ZS': 'South Africa',
+'2': 'UK Overseas',
+'3B': 'Mauritius',
+'4K': 'Azerbaijan',
+'4L': 'Georgia',
+'4O': 'Montenegro',
+'4R': 'Sri Lanka',
+'4X': 'Israel',
+'5A': 'Libya',
+'5B': 'Cyprus',
+'5H': 'Tanzania',
+'5N': 'Nigeria',
+'5R': 'Madagascar',
+'5Y': 'Kenya',
+'6V': 'Senegal',
+'7O': 'Yemen',
+'7T': 'Algeria',
+'8P': 'Barbados',
+'9A': 'Croatia',
+'9G': 'Ghana',
+'9H': 'Malta',
+'9K': 'Kuwait',
+'9M': 'Malaysia',
+'9N': 'Nepal',
+'9V': 'Singapore',
+'9XR': 'Rwanda',
+'9Y': 'Trinidad'
+};
+
+function getCountryFromReg(reg) {
+if (!reg) return 'Unknown';
+for (var i = 3; i >= 1; i--) {
+  var prefix = reg.substring(0, i).toUpperCase();
+  if (regCountry[prefix]) {
+    return regCountry[prefix];
+  }
+}
+return 'Unknown';
+}
+
 var BASE = 'https://api.adsb.lol/v2/point/';
 
 let cache = { data: null, timestamp: 0 };
@@ -106,25 +241,46 @@ try {
       if (seen[id]) return;
       seen[id] = true;
 
+      var reg = a.r || '';
+      var country = getCountryFromReg(reg);
+
       allFlights.push({
         icao24: a.hex || 'unknown',
-        callsign: a.flight ? a.flight.trim() : 'N/A',
-        originCountry: a.r || 'Unknown',
+        callsign: a.flight
+          ? a.flight.trim()
+          : 'N/A',
+        originCountry: country,
+        registration: reg,
         latitude: a.lat,
         longitude: a.lon,
-        baroAltitude: a.alt_baro === 'ground' ? 0 : (a.alt_baro || 0) * 0.3048,
+        baroAltitude: a.alt_baro === 'ground'
+          ? 0
+          : (a.alt_baro || 0) * 0.3048,
         onGround: a.alt_baro === 'ground',
-        velocity: a.gs ? a.gs * 0.514444 : null,
+        velocity: a.gs
+          ? a.gs * 0.514444
+          : null,
         trueTrack: a.track || null,
-        verticalRate: a.baro_rate ? a.baro_rate * 0.00508 : null,
-        geoAltitude: a.alt_geom ? a.alt_geom * 0.3048 : null,
+        verticalRate: a.baro_rate
+          ? a.baro_rate * 0.00508
+          : null,
+        geoAltitude: a.alt_geom
+          ? a.alt_geom * 0.3048
+          : null,
         squawk: a.squawk || null,
-        altitudeFt: a.alt_baro === 'ground' ? 0 : (a.alt_baro || null),
-        speedKnots: a.gs ? Math.round(a.gs) : null,
-        speedKmh: a.gs ? Math.round(a.gs * 1.852) : null,
+        altitudeFt: a.alt_baro === 'ground'
+          ? 0
+          : (a.alt_baro || null),
+        speedKnots: a.gs
+          ? Math.round(a.gs)
+          : null,
+        speedKmh: a.gs
+          ? Math.round(a.gs * 1.852)
+          : null,
         type: a.t || null,
-        registration: a.r || null,
-        lastContact: Math.floor(Date.now() / 1000)
+        lastContact: Math.floor(
+          Date.now() / 1000
+        )
       });
     });
   });
