@@ -3,8 +3,6 @@ import GlobeGL from 'react-globe.gl';
 import useFlightStore from '../store/useFlightStore';
 import { getAltitudeColor } from '../utils/helpers';
 
-var planePath = 'M12 2L8 10H3L5 13L3 22L12 18L21 22L19 13L21 10H16L12 2Z';
-
 export default function GlobeView() {
 var globeRef = useRef();
 var { filteredFlights, setSelectedFlight, selectedFlight } = useFlightStore();
@@ -65,33 +63,6 @@ var handleClick = useCallback(function(point) {
 
 var pointsData = useMemo(function() { return filteredFlights; }, [filteredFlights]);
 
-var createMarker = useCallback(function(d) {
-  var el = document.createElement('div');
-  var isSelected = selectedFlight && d.icao24 === selectedFlight.icao24;
-  var color = isSelected ? '#ffffff' : getAltitudeColor(d.baroAltitude);
-  var size = isSelected ? 14 : 8;
-  var rotation = d.trueTrack || 0;
-
-  var svgNS = 'http://www.w3.org/2000/svg';
-  var svg = document.createElementNS(svgNS, 'svg');
-  svg.setAttribute('width', String(size));
-  svg.setAttribute('height', String(size));
-  svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('fill', color);
-  svg.style.transform = 'rotate(' + rotation + 'deg)';
-  svg.style.filter = 'drop-shadow(0 0 2px rgba(0,0,0,0.5))';
-
-  var path = document.createElementNS(svgNS, 'path');
-  path.setAttribute('d', planePath);
-  svg.appendChild(path);
-
-  el.appendChild(svg);
-  el.style.cursor = 'pointer';
-  el.style.transition = 'transform 0.3s';
-
-  return el;
-}, [selectedFlight]);
-
 return (
   <GlobeGL
     ref={globeRef}
@@ -104,13 +75,27 @@ return (
     atmosphereColor="#00d4ff"
     atmosphereAltitude={0.15}
 
-    htmlElementsData={pointsData}
-    htmlLat="latitude"
-    htmlLng="longitude"
-    htmlAltitude={function(d) { return d.onGround ? 0.001 : Math.min((d.baroAltitude || 0) / 800000, 0.06); }}
-    htmlElement={createMarker}
-    onHtmlElementClick={handleClick}
-    htmlTransitionDuration={0}
+    pointsData={pointsData}
+    pointLat="latitude"
+    pointLng="longitude"
+    pointAltitude={function(d) { return d.onGround ? 0.001 : Math.min((d.baroAltitude || 0) / 800000, 0.06); }}
+    pointRadius={0.18}
+    pointColor={function(d) {
+      if (selectedFlight && d.icao24 === selectedFlight.icao24) return '#ffffff';
+      return getAltitudeColor(d.baroAltitude);
+    }}
+    pointsMerge={true}
+    onPointClick={handleClick}
+    pointLabel={function(d) {
+      return '<div style="background:rgba(13,27,42,0.95);backdrop-filter:blur(8px);border:1px solid rgba(0,212,255,0.3);border-radius:8px;padding:8px 
+12px;font-family:monospace;font-size:11px;color:white;">'
+        + '<div style="font-weight:bold;font-size:13px;color:#00d4ff;margin-bottom:4px;">' + d.callsign + '</div>'
+        + '<div style="color:#aaa;">' + d.originCountry + (d.type ? ' · ' + d.type : '') + '</div>'
+        + '<div style="margin-top:4px;">'
+        + (d.altitudeFt ? d.altitudeFt.toLocaleString() + ' ft' : 'Ground')
+        + ' · ' + (d.speedKnots ? d.speedKnots + ' kts' : '')
+        + '</div></div>';
+    }}
 
     waitForGlobeReady={true}
     animateIn={true}
